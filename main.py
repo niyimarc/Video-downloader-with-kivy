@@ -15,6 +15,8 @@ class DemoApp(MDApp):
         screen = Builder.load_string(screen_helper)
         return screen
 
+    def clear_link_field(self, text_field):
+        text_field.text = ""
     def getLinkInfo(self, event):
         self.link = self.root.ids.link_input.text  # Access MDTextField using ids
         self.yt = YouTube(self.link)

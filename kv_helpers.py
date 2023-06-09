@@ -47,6 +47,12 @@ MDScreen:
                                 pos_hint: {'center_x': 0.4, 'center_y': 0.75}
                                 size_hint: (.7,None)
                                 
+                            MDIconButton:
+                                icon: "close-circle-outline"
+                                pos_hint: {"center_y": .75}
+                                pos: link_input.width - self.width + dp(8), 0
+                                on_release: app.clear_link_field(link_input)
+                                
                             MDRoundFlatButton:
                                 text: "Get Link"
                                 pos_hint: {'center_x': 0.86, 'center_y': 0.75}
