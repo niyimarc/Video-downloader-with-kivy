@@ -6,7 +6,7 @@ MDScreen:
                 BoxLayout:
                     orientation: 'vertical'
                     MDTopAppBar:
-                        title: "Demo App"
+                        title: "Drey Tech"
                         elevation: 4
                         pos_hint: {"top": 1}
                         specific_text_color: "#4a4939"
@@ -58,6 +58,7 @@ MDScreen:
                                 pos_hint: {'center_x': 0.86, 'center_y': 0.75}
                                 size_hint: (None,None)
                                 on_release: app.getLinkInfo(self)  # Call the function when the button is released
+                                disabled: not link_input.text or not link_input.text.startswith(("https://youtu.be/", "https://www.youtube.com/"))
                                 
                             
                             
@@ -118,9 +119,9 @@ MDScreen:
             MDNavigationDrawerMenu:
     
                 MDNavigationDrawerHeader:
-                    title: "Header title"
+                    title: "Drey Tech"
                     title_color: "#4a4939"
-                    text: "Header text"
+                    text: "app"
                     spacing: "4dp"
                     padding: "12dp", 0, 0, "56dp"
     

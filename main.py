@@ -8,7 +8,7 @@ from pytube import YouTube
 
 
 Window.size = (450,700)
-class DemoApp(MDApp):
+class DreyApp(MDApp):
 
     def build(self):
         self.theme_cls.primary_palette = "Orange"
@@ -66,4 +66,4 @@ class DemoApp(MDApp):
             print('Please select a resolution')
 
 if __name__ == "__main__":
-    DemoApp().run()
+    DreyApp().run()
