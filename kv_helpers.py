@@ -37,7 +37,7 @@ MDScreen:
                                 source: 'img/youtube.png'
                                 size_hint: (.5,None)
                                 pos_hint: {'center_x': 0.5, 'center_y': 0.9}
-                                
+
                                 
                             MDTextField:
                                 id: link_input
@@ -54,19 +54,26 @@ MDScreen:
                                 on_release: app.clear_link_field(link_input)
                                 
                             MDRoundFlatButton:
+                                id: get_link
                                 text: "Get Link"
                                 pos_hint: {'center_x': 0.86, 'center_y': 0.75}
                                 size_hint: (None,None)
                                 on_release: app.getLinkInfo(self)  # Call the function when the button is released
                                 disabled: not link_input.text or not link_input.text.startswith(("https://youtu.be/", "https://www.youtube.com/"))
-                                
                             
+                            MDSpinner:
+                                id: spinner
+                                size_hint: None, None
+                                size: dp(46), dp(46)
+                                pos_hint: {'center_x': .5, 'center_y': .6}
+                                active: True if get_link.state == 'down' else False
                             
                             BoxLayout:
                                 id: video_details
                                 orientation: "horizontal"
                                 pos_hint: {'center_x': 0.5, 'center_y': 20}
                                 
+                                        
                                 AsyncImage:
                                     id: async_image
                                     size_hint: (.5,None)
