@@ -6,8 +6,12 @@ from kivymd.uix.snackbar import Snackbar
 
 from kv_helpers import screen_helper
 from pytube import YouTube
+from pytube import Playlist
+from pytube.exceptions import MaxRetriesExceeded
 import socket
 from kivymd.uix.dialog import MDDialog
+from urllib.parse import urlparse, parse_qs
+import re
 
 Window.size = (450,700)
 
@@ -18,9 +22,6 @@ class DreyApp(MDApp):
         self.theme_cls.primary_palette = "Orange"
         screen = Builder.load_string(screen_helper)
         return screen
-
-    def clear_link_field(self, text_field):
-        text_field.text = ""
 
     def getLinkInfo(self, event):
         # Check for internet connection
@@ -35,10 +36,25 @@ class DreyApp(MDApp):
         self.vtitle = self.yt.title
 
         video_details = self.root.ids.video_details  # Access the BoxLayout of video details
-        video_details.pos_hint = {'center_x': 0.5, 'center_y': 0.6}
+        video_details.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
 
-        spinner = self.root.ids.spinner
-        spinner.active = False  # Stop spinning
+        # Parse the link URL
+        parsed = urlparse(self.link)
+        # Extract the query parameters from the parsed URL
+        query = parse_qs(parsed.query)
+        # Access the video_playlist_detail BoxLayout using ids
+        video_playlist_detail = self.root.ids.video_playlist_detail
+        # Check if the 'list' parameter exists in the query parameters
+        if 'list' in query:
+            # If the 'list' parameter exists, it means the link is a playlist
+            # Create a Playlist object using the link
+            self.playlist = Playlist(self.link)
+            # Set the position hint for the video_playlist_detail BoxLayout
+            video_playlist_detail.pos_hint = {'center_y': 0.38}
+        else:
+            # If the 'list' parameter does not exist, it means the link is not a playlist
+            # Set the position hint to hide the video_playlist_detail BoxLayout
+            video_playlist_detail.pos_hint = {'center_y': 20}
 
         async_image = self.root.ids.async_image  # Access AsyncImage using ids
         async_image.source = self.source
@@ -97,6 +113,41 @@ class DreyApp(MDApp):
         else:
             Snackbar(
                 text="[color=#ddbb34]please select a resolution before download![/color]",
+                snackbar_x="10dp",
+                snackbar_y="10dp",
+                size_hint_x=.7,
+            ).open()
+
+    def sanitize_filename(self, filename):
+        """
+        Remove characters that are not allowed in filenames on Windows.
+        """
+        restricted_chars = r'[<>:"/\\|?*]'
+        sanitized_filename = re.sub(restricted_chars, "", filename)
+        return sanitized_filename
+    def downloadPlaylistVideo(self, event):
+        try:
+            Snackbar(
+                text="[color=#ddbb34]Downloading playlist videos...[/color]",
+                snackbar_x="10dp",
+                snackbar_y="10dp",
+                size_hint_x=.7,
+            ).open()
+            sanitized_title = self.sanitize_filename(self.vtitle)
+            for video in self.playlist.videos:
+                highest_resolution = video.streams.get_highest_resolution()
+                if highest_resolution:
+                    highest_resolution.download("YoutubeDownloader/" + sanitized_title)
+            Snackbar(
+                text="[color=#ddbb34]Playlist fully downloaded[/color]",
+                snackbar_x="10dp",
+                snackbar_y="10dp",
+                size_hint_x=.7,
+            ).open()
+        except MaxRetriesExceeded:
+            # Handle the MaxRetriesExceeded exception
+            Snackbar(
+                text="[color=#ddbb34]Failed to download playlist videos. Please check your internet connection and try again.[/color]",
                 snackbar_x="10dp",
                 snackbar_y="10dp",
                 size_hint_x=.7,

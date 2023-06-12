@@ -33,47 +33,46 @@ MDScreen:
                             text: 'Youtube'
                             icon: 'youtube'
                 
-                            Image:
-                                source: 'img/youtube.png'
-                                size_hint: (.5,None)
-                                pos_hint: {'center_x': 0.5, 'center_y': 0.9}
-
-                                
-                            MDTextField:
-                                id: link_input
-                                hint_text: "Paste Youtube Video Link"
-                                mode: "round"
-                                helper_text: "Paste Youtube Video Link"
-                                pos_hint: {'center_x': 0.4, 'center_y': 0.75}
-                                size_hint: (.7,None)
-                                
-                            MDIconButton:
-                                icon: "close-circle-outline"
-                                pos_hint: {"center_y": .75}
-                                pos: link_input.width - self.width + dp(8), 0
-                                on_release: app.clear_link_field(link_input)
-                                
-                            MDRoundFlatButton:
-                                id: get_link
-                                text: "Get Link"
-                                pos_hint: {'center_x': 0.86, 'center_y': 0.75}
-                                size_hint: (None,None)
-                                on_release: app.getLinkInfo(self)  # Call the function when the button is released
-                                disabled: not link_input.text or not link_input.text.startswith(("https://youtu.be/", "https://www.youtube.com/"))
                             
-                            MDSpinner:
-                                id: spinner
-                                size_hint: None, None
-                                size: dp(46), dp(46)
-                                pos_hint: {'center_x': .5, 'center_y': .6}
-                                active: True if get_link.state == 'down' else False
-                            
+                            BoxLayout:
+                                orientation: "vertical"   
+                                pos_hint: {'center_x': 0.5, 'center_y': 1} 
+                                spacing: "20dp"
+                                
+                                Image:
+                                    source: 'img/youtube.png'
+                                    size_hint: (.5,None)
+                                    pos_hint: {'center_x': 0.5} 
+                                    
+                                BoxLayout:
+                                    orientation: "horizontal" 
+                                    size_hint: (.9,None)
+                                    pos_hint: {'center_x': 0.5, 'center_y': 0.95} 
+                                    spacing: "10dp"
+                                    
+                                    MDTextField:
+                                        id: link_input
+                                        hint_text: "Paste Youtube Video Link"
+                                        mode: "fill"
+                                        helper_text: "Paste Youtube Video Link"
+                                        pos_hint: {'center_y': 0.95}   
+                                        multiline: False
+                                        on_focus:
+                                            if self.focus: self.select_all()
+                          
+                                        
+                                    MDRaisedButton:
+                                        id: get_link
+                                        text: "Get Link"
+                                        pos_hint: {'center_x': 0.86, 'center_y': 0.95}
+                                        on_release: app.getLinkInfo(self)  # Call the function when the button is released
+                                        disabled: not link_input.text or not link_input.text.startswith(("https://youtu.be/", "https://www.youtube.com/"))
+                                
                             BoxLayout:
                                 id: video_details
                                 orientation: "horizontal"
                                 pos_hint: {'center_x': 0.5, 'center_y': 20}
-                                
-                                        
+                                    
                                 AsyncImage:
                                     id: async_image
                                     size_hint: (.5,None)
@@ -83,33 +82,44 @@ MDScreen:
                                 BoxLayout:
                                     orientation: "vertical"
                                     size_hint: (.5, None)
-                                    pos_hint: {'center_x': 0.5, 'center_y': 0.5}
-
+                                    pos_hint: {'center_y': 0.5}
+                                    spacing: "10dp"  # Set the desired spacing  
+                                    
                                     MDLabel:
                                         id: video_title
                                         text: ''
-                                        size: self.texture_size
-                                        
-                                        
+                                        size: self.texture_size      
                                     
+                                    
+                                        
                                     BoxLayout:        
                                         orientation: "horizontal"   
-                                        spacing: "10dp"  # Set the desired spacing              
-                                        MDRoundFlatButton:
-                                            text: "Download"
-                                            size_hint: (None,None)    
-                                            on_release: app.downloadVideo(self)  # Call the function when the button is released    
-                                        
+                                        spacing: "5dp"  # Set the desired spacing  
+   
                                         MDTextFieldRect:
                                             id: drop_down_btn
                                             text: "Resolution"
-                                            size_hint: (None,0.7)  
+                                            size_hint: (None,0.8)  
                                             on_focus: if self.focus: app.show_resolution_menu(self)  # Show resolution menu on focus      
                                         
                                         DropDown:
-                                            id: drop_down              
+                                            id: drop_down 
                                             
-        
+                                        MDRaisedButton:
+                                            text: "Download"
+                                            size_hint: (None,0.8)    
+                                            on_release: app.downloadVideo(self)  # Call the function when the button is released   
+                            BoxLayout:
+                                id: video_playlist_detail
+                                orientation: "horizontal"
+                                pos_hint: {'center_x': 0.16, 'center_y': 20} 
+                                size_hint: (None,None)     
+                                
+                                MDRaisedButton:
+                                    text: "Download Playlist Instead"
+                                    pos_hint: {'center_y': 0.48}
+                                    on_release: app.downloadPlaylistVideo(self)  # Call the function when the button is released                          
+                                                   
                         MDBottomNavigationItem:
                             name: 'screen 2'
                             text: 'Facebok'
