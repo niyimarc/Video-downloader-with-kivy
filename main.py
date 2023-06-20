@@ -3,7 +3,7 @@ from kivy.lang import Builder
 from kivy.core.window import Window
 from kivymd.uix.button import MDRectangleFlatButton
 from kivymd.uix.snackbar import Snackbar
-
+from kivymd.uix.filemanager import MDFileManager
 from kv_helpers import screen_helper
 from pytube import YouTube
 from pytube import Playlist
@@ -12,16 +12,56 @@ import socket
 from kivymd.uix.dialog import MDDialog
 from urllib.parse import urlparse, parse_qs
 import re
-
-Window.size = (450,700)
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from kivy.clock import Clock, mainthread
+import platform
+Window.size = (360,640)
 
 class DreyApp(MDApp):
     dialog = None
+    file_manager = None
+    file_size = 0  # Define the 'file_size' attribute
+
 
     def build(self):
         self.theme_cls.primary_palette = "Orange"
         screen = Builder.load_string(screen_helper)
+        # Set the window size to match the Android device's screen size
+        if platform == 'android':
+            Window.size = self.get_android_screen_size()
+
         return screen
+
+    def get_android_screen_size(self):
+        from jnius import autoclass
+
+        # Get the current activity and display metrics
+        activity = autoclass('org.kivy.android.PythonActivity').mActivity
+        metrics = autoclass('android.util.DisplayMetrics')()
+
+        # Get the default display
+        display = activity.getWindowManager().getDefaultDisplay()
+        display.getMetrics(metrics)
+
+        # Return the screen width and height
+        return (metrics.widthPixels, metrics.heightPixels)
+
+    def open_file_manager(self):
+        if self.file_manager is None:
+            self.file_manager = MDFileManager(
+                exit_manager=self.exit_file_manager,  # Set the exit_manager method
+                select_path=self.select_path,  # Set the select_path method
+            )
+        self.file_manager.show('/')  # Show the file manager
+
+    def exit_file_manager(self, *args):
+        self.file_manager.close()  # Close the file manager
+
+    def select_path(self, path):
+        self.root.ids.download_location.text = path  # Update the text of the download_location label
+        self.download_path = path
+        self.exit_file_manager()  # Close the file manager
 
     def getLinkInfo(self, event):
         # Check for internet connection
@@ -30,13 +70,22 @@ class DreyApp(MDApp):
             self.show_no_internet_dialog()
             return
 
+        self.current_size = 0  # Initialize current_size to 0
+
         self.link = self.root.ids.link_input.text  # Access MDTextField using ids
         self.yt = YouTube(self.link)
         self.source = self.yt.thumbnail_url
         self.vtitle = self.yt.title
 
+        location_details = self.root.ids.location_detail
+        location_details.pos_hint = {'center_x': 0.5, 'center_y': 0.35}
+
         video_details = self.root.ids.video_details  # Access the BoxLayout of video details
         video_details.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
+
+        progress_bar_detail = self.root.ids.progress_bar_detail
+        progress_bar_detail.pos_hint = {'center_x': 0.5, 'center_y': 0.26}
+        self.progress_label = self.root.ids.progress_label
 
         # Parse the link URL
         parsed = urlparse(self.link)
@@ -50,7 +99,7 @@ class DreyApp(MDApp):
             # Create a Playlist object using the link
             self.playlist = Playlist(self.link)
             # Set the position hint for the video_playlist_detail BoxLayout
-            video_playlist_detail.pos_hint = {'center_y': 0.38}
+            video_playlist_detail.pos_hint = {'center_y': 0.2}
         else:
             # If the 'list' parameter does not exist, it means the link is not a playlist
             # Set the position hint to hide the video_playlist_detail BoxLayout
@@ -86,22 +135,20 @@ class DreyApp(MDApp):
     def downloadVideo(self, event):
         resolution = self.root.ids.drop_down_btn.text  # Get the selected resolution
 
+
         if not self.check_internet_connection():
             # Show dialog if there is no internet connection
             self.show_no_internet_dialog()
             return
 
         if resolution != 'Resolution':
-            selected_video = self.video.filter(res=resolution).first()
-            if selected_video:
-                selected_video.download("YoutubeDownloader")
-                print('Downloading')
-                Snackbar(
-                    text="[color=#ddbb34]Downloading video![/color]",
-                    snackbar_x="10dp",
-                    snackbar_y="10dp",
-                    size_hint_x=.7,
-                ).open()
+            self.selected_video = self.video.filter(res=resolution).first()
+            if self.selected_video:
+                self.file_size = self.selected_video.filesize
+
+                # Start the download in a separate thread to avoid app slowing down or freezing
+                download_thread = threading.Thread(target=self.start_downloadvideo, args=(self.selected_video, self.file_size))
+                download_thread.start()
 
             else:
                 Snackbar(
@@ -126,24 +173,20 @@ class DreyApp(MDApp):
         sanitized_filename = re.sub(restricted_chars, "", filename)
         return sanitized_filename
     def downloadPlaylistVideo(self, event):
+
         try:
-            Snackbar(
-                text="[color=#ddbb34]Downloading playlist videos...[/color]",
-                snackbar_x="10dp",
-                snackbar_y="10dp",
-                size_hint_x=.7,
-            ).open()
-            sanitized_title = self.sanitize_filename(self.vtitle)
-            for video in self.playlist.videos:
-                highest_resolution = video.streams.get_highest_resolution()
-                if highest_resolution:
-                    highest_resolution.download("YoutubeDownloader/" + sanitized_title)
-            Snackbar(
-                text="[color=#ddbb34]Playlist fully downloaded[/color]",
-                snackbar_x="10dp",
-                snackbar_y="10dp",
-                size_hint_x=.7,
-            ).open()
+            # Create a thread for each video in the playlist and start downloading
+            download_threads = [] # Create an empty list to store the download threads
+            with ThreadPoolExecutor() as executor:
+                for video in self.playlist.videos:
+                    thread = threading.Thread(target=self.start_downloadplaylistvideo, args=(video, self.file_size))
+                    download_threads.append(thread)
+                    thread.start()
+
+            # Wait for all the threads to complete
+            for thread in download_threads:
+                thread.join()
+
         except MaxRetriesExceeded:
             # Handle the MaxRetriesExceeded exception
             Snackbar(
@@ -153,13 +196,50 @@ class DreyApp(MDApp):
                 size_hint_x=.7,
             ).open()
 
-    def video_download_complete(self, stream, file_path):
+    def start_downloadvideo(self, video, file_size):
+        try:
+            Clock.schedule_once(lambda dt: self.update_download_progress(file_size, self.current_size), 0)
+            video.download(self.download_path + "/")
+            Clock.schedule_interval(lambda dt: self.update_download_progress(0, 0), 0.5)
+        except Exception as e:
+            # Handle any exceptions that occur during the download process
+            print(f"Download error: {e}")
+
+    @mainthread
+    def show_downloading_snackbar(self, text):
         Snackbar(
-            text="[color=#ddbb34]Download completed![/color]",
+            text=text,
             snackbar_x="10dp",
             snackbar_y="10dp",
             size_hint_x=.7,
         ).open()
+
+    @mainthread
+    def update_progress_label(self, text):
+        self.progress_label.text = text
+    def start_downloadplaylistvideo(self, video, file_size):
+
+        try:
+            # Schedule the Snackbar and progress label update on the main thread
+            Clock.schedule_once(lambda dt: self.show_downloading_snackbar("Downloading playlist videos..."), 0)
+            Clock.schedule_once(lambda dt: self.update_progress_label("Download in progress..."), 0)
+
+            Clock.schedule_once(lambda dt: self.update_download_progress(file_size, self.current_size), 0)
+            sanitized_title = self.sanitize_filename(self.vtitle)
+
+            highest_resolution = video.streams.get_highest_resolution()
+            Clock.schedule_interval(lambda dt: self.update_download_progress(0, 0), 0.5)  # Notify the user when download starts
+            highest_resolution.download(output_path=self.download_path + "/" + sanitized_title)
+        except Exception as e:
+            # Handle any exceptions that occur during the download process
+            print(f"Download error: {e}")
+
+    def update_download_progress(self, total_size, current_size):
+
+        if total_size > 0:
+            self.progress_label.text = "Download in progress..."
+        elif total_size == 0:
+            self.progress_label.text = "Download completed!"
 
     def check_internet_connection(self):
         try:
@@ -182,6 +262,7 @@ class DreyApp(MDApp):
             )
         if not self.dialog._is_open:
             self.dialog.open()
+
 
     def on_stop(self):
         if self.dialog:
