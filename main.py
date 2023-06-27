@@ -16,8 +16,6 @@ from pytube import Playlist
 from urllib.parse import urlparse, parse_qs
 from my_functions import update_async_image, update_video_title, update_video_details, update_resolution_buttons, open_file_manager, exit_file_manager, select_path
 
-
-
 Window.size = (1100,700)
 
 class DreyApp(MDApp):
@@ -256,14 +254,6 @@ class DreyApp(MDApp):
             )
         if not self.dialog._is_open:
             self.dialog.open()
-
-    def show_download_error_message(self):
-        Snackbar(
-            text="[color=#ddbb34]Trying to fetch video information. Please wait or try again later.[/color]",
-            snackbar_x="10dp",
-            snackbar_y="10dp",
-            size_hint_x=.7,
-        ).open()
 
     def on_stop(self):
         if self.dialog:
