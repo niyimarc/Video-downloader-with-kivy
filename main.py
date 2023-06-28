@@ -1,7 +1,6 @@
 from kivymd.app import MDApp
 from kivy.lang import Builder
 from kivy.core.window import Window
-from kivymd.uix.button import MDRectangleFlatButton
 from kivymd.uix.snackbar import Snackbar
 from kv_helpers import screen_helper
 from pytube import YouTube
@@ -14,21 +13,21 @@ from concurrent.futures import ThreadPoolExecutor
 from kivy.clock import Clock, mainthread
 from pytube import Playlist
 from urllib.parse import urlparse, parse_qs
-from my_functions import update_async_image, update_video_title, update_video_details, update_resolution_buttons, open_file_manager, exit_file_manager, select_path
-
-Window.size = (1100,700)
+from my_functions import update_async_image, update_video_title, update_video_details, open_file_manager, exit_file_manager, select_path
+import os
+Window.size = (1000,700)
 
 class DreyApp(MDApp):
     dialog = None
     file_manager = None
     file_size = 0  # Define the 'file_size' attribute
 
-
     def build(self):
         self.theme_cls.primary_palette = "Orange"
         screen = Builder.load_string(screen_helper)
 
         return screen
+
 
     def get_android_screen_size(self):
         from jnius import autoclass
@@ -89,7 +88,8 @@ class DreyApp(MDApp):
         update_async_image(self.root, self.source)
         update_video_title(self.root, self.vtitle)
         update_video_details(self.root)
-        update_resolution_buttons(self.root)
+
+
 
         progress_bar_detail = self.root.ids.progress_bar_detail
         progress_bar_detail.pos_hint = {'center_x': 0.5, 'center_y': 0.26}
@@ -97,51 +97,23 @@ class DreyApp(MDApp):
 
         self.video = self.yt.streams.filter(file_extension='mp4').order_by('resolution').desc()
 
-    def show_resolution_menu(self, instance):
-        drop_down = self.root.ids.drop_down
-        drop_down.clear_widgets()  # Clear existing resolution buttons
-
-        for video in self.video:
-            btn = MDRectangleFlatButton(
-                text=video.resolution,
-                size_hint=(None, None),
-                on_release=lambda btn: self.select_resolution(btn.text),
-            )
-            drop_down.add_widget(btn)
-
-        drop_down.open(instance)
-
-    def select_resolution(self, resolution):
-        self.root.ids.drop_down_btn.text = resolution
 
     def downloadVideo(self, event):
-        resolution = self.root.ids.drop_down_btn.text  # Get the selected resolution
-
-
         if not self.check_internet_connection():
             # Show dialog if there is no internet connection
             self.show_no_internet_dialog()
             return
 
-        if resolution != 'Resolution':
-            self.selected_video = self.video.filter(res=resolution).first()
-            if self.selected_video:
-                self.file_size = self.selected_video.filesize
-
-                # Start the download in a separate thread to avoid app slowing down or freezing
-                download_thread = threading.Thread(target=self.start_downloadvideo, args=(self.selected_video, self.file_size))
-                download_thread.start()
-
-            else:
-                Snackbar(
-                    text="[color=#ddbb34]Selected resolution is not available for download![/color]",
-                    snackbar_x="10dp",
-                    snackbar_y="10dp",
-                    size_hint_x=.7,
-                ).open()
+        # Find the stream with the highest resolution
+        highest_resolution = self.yt.streams.get_highest_resolution()
+        if highest_resolution:
+            # Start the download in a separate thread to avoid app slowing down or freezing
+            download_thread = threading.Thread(target=self.start_downloadvideo, args=(highest_resolution,))
+            download_thread.start()
         else:
+            # If there is no stream with the highest resolution, show an error message
             Snackbar(
-                text="[color=#ddbb34]please select a resolution before download![/color]",
+                text="No video available in the highest resolution",
                 snackbar_x="10dp",
                 snackbar_y="10dp",
                 size_hint_x=.7,
@@ -189,14 +161,19 @@ class DreyApp(MDApp):
                 size_hint_x=.7,
             ).open()
 
-    def start_downloadvideo(self, video, file_size):
+
+    def start_downloadvideo(self, video):
         try:
-            Clock.schedule_once(lambda dt: self.update_download_progress(file_size, self.current_size), 0)
+            self.total_size = video.filesize
+            self.current_size = 0
+            self.download_completed = False
+            Clock.schedule_once(lambda dt: self.update_download_progress(self.total_size, self.current_size), 0)
             video.download(self.download_path + "/")
-            Clock.schedule_interval(lambda dt: self.update_download_progress(0, 0), 0.5)
+            self.download_completed = True  # Set the download_completed flag to True
         except Exception as e:
             # Handle any exceptions that occur during the download process
             print(f"Download error: {e}")
+
 
     @mainthread
     def show_downloading_snackbar(self, text):
@@ -214,6 +191,11 @@ class DreyApp(MDApp):
         try:
             sanitized_title = self.sanitize_filename(self.vtitle)
             def download_playlist():
+                file_path = f"{self.download_path}/{sanitized_title}/{video.title}.mp4"
+                if os.path.exists(file_path):
+                    # Skip the video if it already exists
+                    self.update_progress_label(f"Skipping video: {video.title}")
+                    return
                 # Download the playlist in the background
                 highest_resolution = video.streams.get_highest_resolution()
                 highest_resolution.download(output_path=self.download_path + "/" + sanitized_title)
@@ -228,10 +210,15 @@ class DreyApp(MDApp):
             print(f"Download error: {e}")
 
     def update_download_progress(self, total_size, current_size):
-        if total_size > 0:
-            self.progress_label.text = "Download in progress..."
+        if self.download_completed:
+            progress = "Download completed!"
         elif total_size == 0:
             self.progress_label.text = "Download completed!"
+        elif current_size > 0 and total_size > 0:
+            progress = f"Download in progress..."
+        else:
+            progress = "Download in progress..."
+        self.progress_label.text = progress
 
     def check_internet_connection(self):
         try:

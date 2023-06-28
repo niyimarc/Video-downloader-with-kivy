@@ -6,7 +6,7 @@ MDScreen:
                 BoxLayout:
                     orientation: 'vertical'
                     MDTopAppBar:
-                        title: "Drey Youtube Video Downloader (DYVD) V0.0.1"
+                        title: "Drey Youtube Video Downloader (DYVD) V0.0.2"
                         elevation: 4
                         pos_hint: {"top": 1}
                         specific_text_color: "#4a4939"
@@ -32,7 +32,7 @@ MDScreen:
                                     height: self.minimum_height
                             
                                     AsyncImage:
-                                        source: 'https://github.com/niyimarc/Video-downloader-with-kivy/blob/master/youtube.png?raw=true'
+                                        source: 'https://github.com/niyimarc/Video-downloader-with-kivy/blob/master/icon.png?raw=true'
                                         size_hint: (.5, None)
                                         height: dp(100)
                                         pos_hint: {'center_x': 0.5}
@@ -60,7 +60,8 @@ MDScreen:
                                         id: get_link
                                         text: "Get Link"
                                         pos_hint: {'center_x': 0.86, 'center_y': 0.95}
-                                        on_release: app.getLinkInfo(self)  # Call the function when the button is released
+                                        on_release: 
+                                            app.getLinkInfo(self)  # Call the function when the button is released
                                         disabled: not link_input.text or not link_input.text.startswith(("https://youtu.be/", "https://www.youtube.com/"))
                                 
                             BoxLayout:
@@ -91,21 +92,11 @@ MDScreen:
                                         orientation: "horizontal"   
                                         size_hint: (None, .7)
                                         spacing: "10dp"  # Set the desired spacing  
-   
-                                        MDTextFieldRect:
-                                            id: drop_down_btn
-                                            text: "Resolution"
-                                            readonly: True  # Set the text field as readonly
-                                            size_hint: (None,0.9)  
-                                            on_focus: if self.focus: app.show_resolution_menu(self)  # Show resolution menu on focus      
-                                        
-                                        DropDown:
-                                            id: drop_down 
                                         
                                         MDRectangleFlatButton:
                                             text: "Download Location"
                                             size_hint: (None,0.9)
-                                            on_release: app.open_file_manager() if drop_down_btn.text != "Resolution" else None
+                                            on_release: app.open_file_manager() 
                                         
                                         MDLabel:
                                             id: download_location
@@ -117,21 +108,20 @@ MDScreen:
                                             text: "Download Video"
                                             pos_hint: {'center_y': 0.35}   
                                             on_release: app.downloadVideo(self)  # Call the function when the button is released   
-                                            disabled: drop_down_btn.text == "Resolution" or not download_location.text or download_location.text == "Choose Download Location"
+                                            disabled: download_location.text == "Choose Download Location"
                                             
                                         MDRaisedButton:
                                             id: download_video_playlist
                                             text: "Download Playlist Instead"
                                             pos_hint: {'center_y': 0.35}
                                             on_release: app.downloadPlaylistVideo(self)  # Call the function when the button is released 
-                                            disabled: drop_down_btn.text == "Resolution" or not download_location.text or download_location.text == "Choose Download Location"   
+                                            disabled: download_location.text == "Choose Download Location"   
                                             halign: "center"  
                                            
                             BoxLayout:
                                 orientation: "horizontal"
                                 pos_hint: {'center_x': 0.5, 'center_y': 20} 
                                 id: progress_bar_detail
-                                orientation: "horizontal"
                                 size_hint: (.9,None)
                                 height: "18dp"   
                             
@@ -139,6 +129,7 @@ MDScreen:
                                     id: progress_label
                                     text: "Download Status"
                                     halign: "center"
+                                        
                                     
                         MDBottomNavigationItem:
                             name: 'screen 3'
@@ -163,7 +154,7 @@ MDScreen:
                                     halign: 'center'
                                     
                                 MDLabel:
-                                    text: 'Step 2: Once the video details are fully loaded, you must select resolution and choose your download path(download path is where you want your video to be downloaded to.'
+                                    text: 'Step 2: Once the video details are fully loaded, you must choose your download path(download path is where you want your video to be downloaded to.'
                                     halign: 'center'
                                     
                                 MDLabel:

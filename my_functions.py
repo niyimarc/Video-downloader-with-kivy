@@ -33,9 +33,3 @@ def update_video_title(root, vtitle):
 def update_video_details(root):
     video_details = root.ids.video_details
     video_details.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-
-
-@mainthread
-def update_resolution_buttons(root):
-    drop_down = root.ids.drop_down
-    drop_down.clear_widgets()
